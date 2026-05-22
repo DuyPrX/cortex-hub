@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import styles from './page.module.css'
+import { parseDateSafe } from '@/lib/date'
 
 import useSWR from 'swr'
 import { listApiKeys, createApiKey, revokeApiKey } from '@/lib/api'
@@ -184,8 +185,12 @@ export default function KeysPage() {
                 <td className={styles.keyName}>{key.name}</td>
                 <td><code className={styles.keyPrefix}>{key.prefix}</code></td>
                 <td>{key.scope}</td>
-                <td className={styles.cellMuted}>{key.createdAt}</td>
-                <td className={styles.cellMuted}>{key.expiresAt ?? 'Never'}</td>
+                <td className={styles.cellMuted}>
+                  {key.createdAt ? parseDateSafe(key.createdAt).toLocaleString() : '—'}
+                </td>
+                <td className={styles.cellMuted}>
+                  {key.expiresAt ? parseDateSafe(key.expiresAt).toLocaleString() : 'Never'}
+                </td>
                 <td>
                   <button
                     className="btn btn-ghost btn-sm"
