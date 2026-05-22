@@ -729,7 +729,7 @@ HOOKEOF
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/session-init.sh"
+            "command": "bash -c \"cd \\$(git rev-parse --show-toplevel 2>/dev/null) && bash .claude/hooks/session-init.sh\""
           }
         ]
       }
@@ -740,7 +740,7 @@ HOOKEOF
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/enforce-session.sh"
+            "command": "bash -c \"cd \\$(git rev-parse --show-toplevel 2>/dev/null) && bash .claude/hooks/enforce-session.sh\""
           }
         ]
       },
@@ -749,7 +749,7 @@ HOOKEOF
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/enforce-commit.sh"
+            "command": "bash -c \"cd \\$(git rev-parse --show-toplevel 2>/dev/null) && bash .claude/hooks/enforce-commit.sh\""
           }
         ]
       }
@@ -760,7 +760,7 @@ HOOKEOF
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/track-quality.sh"
+            "command": "bash -c \"cd \\$(git rev-parse --show-toplevel 2>/dev/null) && bash .claude/hooks/track-quality.sh\""
           }
         ]
       }
@@ -771,7 +771,7 @@ HOOKEOF
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/session-end-check.sh"
+            "command": "bash -c \"cd \\$(git rev-parse --show-toplevel 2>/dev/null) && bash .claude/hooks/session-end-check.sh\""
           }
         ]
       }
