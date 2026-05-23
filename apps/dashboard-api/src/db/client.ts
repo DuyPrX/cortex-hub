@@ -204,12 +204,12 @@ try {
   })
   migrateTx()
 
-  // ── One-Time Recovery of Incorrectly Shifted May 22 Timestamps ──
+  // ── One-Time Reversion of Incorrectly Double-Shifted May 22 Timestamps ──
   try {
-    const recoveryKey = 'timezone_recovery_v2_done'
-    const alreadyRecovered = db.prepare("SELECT value FROM hub_config WHERE key = ?").get(recoveryKey)
-    if (!alreadyRecovered) {
-      const tablesAndColsToRecover = [
+    const recoveryV3Key = 'timezone_recovery_v3_revert_double_shift'
+    const alreadyReverted = db.prepare("SELECT value FROM hub_config WHERE key = ?").get(recoveryV3Key)
+    if (!alreadyReverted) {
+      const tablesAndColsToRevert = [
         { table: 'api_keys', cols: ['created_at', 'last_used_at'] },
         { table: 'query_logs', cols: ['created_at'] },
         { table: 'projects', cols: ['created_at', 'updated_at', 'indexed_at'] },
@@ -221,7 +221,7 @@ try {
         { table: 'hub_config', cols: ['updated_at'] },
       ]
       db.transaction(() => {
-        for (const { table, cols } of tablesAndColsToRecover) {
+        for (const { table, cols } of tablesAndColsToRevert) {
           try {
             const tableCheck = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`).get(table)
             if (!tableCheck) continue
@@ -233,18 +233,20 @@ try {
               for (const col of cols) {
                 if (row[col] !== undefined && row[col] !== null) {
                   const val = String(row[col])
-                  // If it has Z and was shifted to May 22 (UTC+7 shift), shift it back by +7 hours
-                  if (val.includes('Z') && (
-                    val.startsWith('2026-05-22T16:') || 
-                    val.startsWith('2026-05-22T17:') || 
-                    val.startsWith('2026-05-22T18:') || 
-                    val.startsWith('2026-05-22T19:') || 
-                    val.startsWith('2026-05-22T20:') || 
-                    val.startsWith('2026-05-22T21:') || 
-                    val.startsWith('2026-05-22T22:') || 
-                    val.startsWith('2026-05-22T23:')
-                  )) {
-                    const restored = (db.prepare(`SELECT strftime('%Y-%m-%dT%H:%M:%SZ', ?, '+7 hours') as r`).get(val) as any).r
+                  // Detect timestamps that were double-shifted to May 22/23
+                  // Range: 2026-05-22T23:00:00Z to 2026-05-23T06:59:59Z
+                  const isDoubleShifted = val.includes('Z') && (
+                    val.startsWith('2026-05-22T23:') ||
+                    val.startsWith('2026-05-23T00:') ||
+                    val.startsWith('2026-05-23T01:') ||
+                    val.startsWith('2026-05-23T02:') ||
+                    val.startsWith('2026-05-23T03:') ||
+                    val.startsWith('2026-05-23T04:') ||
+                    val.startsWith('2026-05-23T05:') ||
+                    val.startsWith('2026-05-23T06:')
+                  )
+                  if (isDoubleShifted) {
+                    const restored = (db.prepare(`SELECT strftime('%Y-%m-%dT%H:%M:%SZ', ?, '-7 hours') as r`).get(val) as any).r
                     needsUpdate = true
                     updates.push(`${col} = ?`)
                     params.push(restored)
@@ -261,14 +263,16 @@ try {
               }
             }
           } catch (e) {
-            console.warn(`[Recovery] Failed recovering table ${table}:`, e)
+            console.warn(`[Recovery V3] Failed reverting table ${table}:`, e)
           }
         }
-        db.prepare("INSERT OR REPLACE INTO hub_config (key, value, updated_at) VALUES (?, 'true', strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))").run(recoveryKey)
+        db.prepare("INSERT OR REPLACE INTO hub_config (key, value, updated_at) VALUES (?, 'true', strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))").run(recoveryV3Key)
+        // Mark V2 recovery done as well to prevent it from ever executing on new/clean databases
+        db.prepare("INSERT OR REPLACE INTO hub_config (key, value, updated_at) VALUES (?, 'true', strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))").run('timezone_recovery_v2_done')
       })()
     }
-  } catch (recoveryErr) {
-    console.warn('[Recovery] Timezone recovery failed:', recoveryErr)
+  } catch (revertErr) {
+    console.warn('[Recovery V3] Timezone reversion failed:', revertErr)
   }
 } catch (migrationErr) {
   console.warn('[Migration] Date-time migration failed:', migrationErr)
