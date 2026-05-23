@@ -76,6 +76,8 @@ services:
     image: ghcr.io/lktiep/cortex-gitnexus:latest
     container_name: cortex-gitnexus
     restart: unless-stopped
+    labels:
+      - "com.containrrr.watchtower.enable=false"
     ports:
       - "4848:4848"
     volumes:
@@ -109,6 +111,8 @@ services:
     image: ghcr.io/lktiep/cortex-api:latest
     container_name: cortex-api
     restart: unless-stopped
+    labels:
+      - "com.containrrr.watchtower.enable=false"
     ports:
       - "4000:4000"
       - "3000:4000" # Backward compatibility for dashboard port
@@ -166,6 +170,8 @@ services:
     image: ghcr.io/lktiep/cortex-mcp:latest
     container_name: cortex-mcp
     restart: unless-stopped
+    labels:
+      - "com.containrrr.watchtower.enable=false"
     ports:
       - "8318:8317"
     volumes:

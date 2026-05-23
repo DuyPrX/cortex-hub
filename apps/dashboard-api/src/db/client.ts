@@ -150,6 +150,12 @@ try {
     if (!formatted.includes('T') && formatted.includes(' ')) {
       formatted = formatted.replace(' ', 'T')
     }
+    // Standard SQLite date-time defaults are written in UTC time.
+    // If there is no timezone indicator, treat it as UTC ('Z') to prevent Node.js 
+    // from incorrectly parsing it as local time and shifting the hours.
+    if (!formatted.includes('Z') && !formatted.match(/[+-]\d{2}:?\d{2}$/)) {
+      formatted = formatted + 'Z'
+    }
     const parsed = new Date(formatted)
     if (isNaN(parsed.getTime())) return trimmed
     return parsed.toISOString().split('.')[0] + 'Z'
@@ -197,6 +203,73 @@ try {
     }
   })
   migrateTx()
+
+  // ── One-Time Recovery of Incorrectly Shifted May 22 Timestamps ──
+  try {
+    const recoveryKey = 'timezone_recovery_v2_done'
+    const alreadyRecovered = db.prepare("SELECT value FROM hub_config WHERE key = ?").get(recoveryKey)
+    if (!alreadyRecovered) {
+      const tablesAndColsToRecover = [
+        { table: 'api_keys', cols: ['created_at', 'last_used_at'] },
+        { table: 'query_logs', cols: ['created_at'] },
+        { table: 'projects', cols: ['created_at', 'updated_at', 'indexed_at'] },
+        { table: 'index_jobs', cols: ['created_at'] },
+        { table: 'usage_logs', cols: ['created_at'] },
+        { table: 'setup_status', cols: ['completed_at'] },
+        { table: 'model_routing', cols: ['updated_at'] },
+        { table: 'budget_settings', cols: ['updated_at'] },
+        { table: 'hub_config', cols: ['updated_at'] },
+      ]
+      db.transaction(() => {
+        for (const { table, cols } of tablesAndColsToRecover) {
+          try {
+            const tableCheck = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`).get(table)
+            if (!tableCheck) continue
+            const rows = db.prepare(`SELECT * FROM ${table}`).all() as Record<string, any>[]
+            for (const row of rows) {
+              let needsUpdate = false
+              const updates: string[] = []
+              const params: any[] = []
+              for (const col of cols) {
+                if (row[col] !== undefined && row[col] !== null) {
+                  const val = String(row[col])
+                  // If it has Z and was shifted to May 22 (UTC+7 shift), shift it back by +7 hours
+                  if (val.includes('Z') && (
+                    val.startsWith('2026-05-22T16:') || 
+                    val.startsWith('2026-05-22T17:') || 
+                    val.startsWith('2026-05-22T18:') || 
+                    val.startsWith('2026-05-22T19:') || 
+                    val.startsWith('2026-05-22T20:') || 
+                    val.startsWith('2026-05-22T21:') || 
+                    val.startsWith('2026-05-22T22:') || 
+                    val.startsWith('2026-05-22T23:')
+                  )) {
+                    const restored = (db.prepare(`SELECT strftime('%Y-%m-%dT%H:%M:%SZ', ?, '+7 hours') as r`).get(val) as any).r
+                    needsUpdate = true
+                    updates.push(`${col} = ?`)
+                    params.push(restored)
+                  }
+                }
+              }
+              if (needsUpdate) {
+                let pkCol = 'id'
+                if (row.id === undefined) {
+                  if (row.key !== undefined) pkCol = 'key'
+                  else if (row.purpose !== undefined) pkCol = 'purpose'
+                }
+                db.prepare(`UPDATE ${table} SET ${updates.join(', ')} WHERE ${pkCol} = ?`).run(...params, row[pkCol])
+              }
+            }
+          } catch (e) {
+            console.warn(`[Recovery] Failed recovering table ${table}:`, e)
+          }
+        }
+        db.prepare("INSERT OR REPLACE INTO hub_config (key, value, updated_at) VALUES (?, 'true', strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))").run(recoveryKey)
+      })()
+    }
+  } catch (recoveryErr) {
+    console.warn('[Recovery] Timezone recovery failed:', recoveryErr)
+  }
 } catch (migrationErr) {
   console.warn('[Migration] Date-time migration failed:', migrationErr)
 }
