@@ -15,6 +15,7 @@ import { Embedder, VectorStore } from '@cortex/shared-mem9'
 import type { EmbedderConfig, VectorStoreConfig } from '@cortex/shared-mem9'
 import { db } from '../db/client.js'
 import { createLogger } from '@cortex/shared-utils'
+import { createEmbedder } from '../lib/embedder-factory.js'
 
 const logger = createLogger('recipe-capture')
 
@@ -75,7 +76,6 @@ function chunkText(text: string): string[] {
 }
 
 function getEmbedder(): Embedder {
-  const { createEmbedder } = require('../lib/embedder-factory.js') as { createEmbedder: () => Embedder }
   return createEmbedder()
 }
 
