@@ -557,8 +557,8 @@ sessionsRouter.post('/:id/end', async (c) => {
           console.warn('[recipe-capture] Session capture error:', (e as Error).message)
           try {
             db.prepare(
-              `INSERT INTO recipe_capture_log (source, source_id, agent_id, project_id, status, error_message)
-               VALUES ('session', ?, ?, ?, 'error', ?)`
+              `INSERT INTO recipe_capture_log (source, source_id, agent_id, project_id, status, error_message, created_at)
+               VALUES ('session', ?, ?, ?, 'error', ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))`
             ).run(id, session.from_agent ?? null, session.project_id ?? null, (e as Error).message?.slice(0, 500))
           } catch { /* ignore */ }
         })
@@ -566,8 +566,8 @@ sessionsRouter.post('/:id/end', async (c) => {
         console.warn('[recipe-capture] Module load error:', (e as Error).message)
         try {
           db.prepare(
-            `INSERT INTO recipe_capture_log (source, source_id, status, error_message)
-             VALUES ('session', ?, 'error', ?)`
+            `INSERT INTO recipe_capture_log (source, source_id, status, error_message, created_at)
+             VALUES ('session', ?, 'error', ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))`
           ).run(id, `Module load: ${(e as Error).message}`.slice(0, 500))
         } catch { /* ignore */ }
       })
@@ -646,8 +646,8 @@ sessionsRouter.patch('/:id/complete', async (c) => {
           console.warn('[recipe-capture] Session capture error:', (e as Error).message)
           try {
             db.prepare(
-              `INSERT INTO recipe_capture_log (source, source_id, agent_id, project_id, status, error_message)
-               VALUES ('session', ?, ?, ?, 'error', ?)`
+              `INSERT INTO recipe_capture_log (source, source_id, agent_id, project_id, status, error_message, created_at)
+               VALUES ('session', ?, ?, ?, 'error', ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))`
             ).run(id, session.from_agent ?? null, session.project_id ?? null, (e as Error).message?.slice(0, 500))
           } catch { /* ignore */ }
         })
@@ -655,8 +655,8 @@ sessionsRouter.patch('/:id/complete', async (c) => {
         console.warn('[recipe-capture] Module load error:', (e as Error).message)
         try {
           db.prepare(
-            `INSERT INTO recipe_capture_log (source, source_id, status, error_message)
-             VALUES ('session', ?, 'error', ?)`
+            `INSERT INTO recipe_capture_log (source, source_id, status, error_message, created_at)
+             VALUES ('session', ?, 'error', ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))`
           ).run(id, `Module load: ${(e as Error).message}`.slice(0, 500))
         } catch { /* ignore */ }
       })

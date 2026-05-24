@@ -761,8 +761,8 @@ conductorRouter.put('/:id', async (c) => {
             console.warn('[recipe-capture] Task capture error:', (e as Error).message)
             try {
               db.prepare(
-                `INSERT INTO recipe_capture_log (source, source_id, agent_id, project_id, status, error_message)
-                 VALUES ('task', ?, ?, ?, 'error', ?)`
+                `INSERT INTO recipe_capture_log (source, source_id, agent_id, project_id, status, error_message, created_at)
+                 VALUES ('task', ?, ?, ?, 'error', ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))`
               ).run(id, existing.assigned_to_agent ?? null, existing.project_id ?? null, (e as Error).message?.slice(0, 500))
             } catch { /* ignore */ }
           })
@@ -770,8 +770,8 @@ conductorRouter.put('/:id', async (c) => {
           console.warn('[recipe-capture] Module load error:', (e as Error).message)
           try {
             db.prepare(
-              `INSERT INTO recipe_capture_log (source, source_id, status, error_message)
-               VALUES ('task', ?, 'error', ?)`
+              `INSERT INTO recipe_capture_log (source, source_id, status, error_message, created_at)
+               VALUES ('task', ?, 'error', ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))`
             ).run(id, `Module load: ${(e as Error).message}`.slice(0, 500))
           } catch { /* ignore */ }
         })

@@ -80,6 +80,28 @@ interface FixResult {
   reasoning: string
 }
 
+function resolveLlmModel(): string {
+  // 1. Explicit env var
+  const envModel = process.env.RECIPE_LLM_MODEL
+  if (envModel) return envModel
+
+  // 2. Dashboard chat routing chain (what user selected in Providers UI)
+  try {
+    const row = db.prepare(
+      "SELECT chain FROM model_routing WHERE purpose = 'chat'"
+    ).get() as { chain: string } | undefined
+    if (row?.chain) {
+      const chain = JSON.parse(row.chain) as { model?: string }[]
+      if (chain[0]?.model) return chain[0].model
+    }
+  } catch {
+    // DB might not be ready yet
+  }
+
+  // 3. Fallback
+  return 'gpt-5.4-mini'
+}
+
 async function generateFix(doc: {
   id: string
   title: string
@@ -105,7 +127,7 @@ async function generateFix(doc: {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: process.env.RECIPE_LLM_MODEL || 'gemini-2.5-flash',
+        model: resolveLlmModel(),
         messages: [
           {
             role: 'system',

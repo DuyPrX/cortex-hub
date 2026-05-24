@@ -218,7 +218,7 @@ services:
     environment:
       WATCHTOWER_CLEANUP: "true"
       WATCHTOWER_POLL_INTERVAL: 300
-      WATCHTOWER_LABEL_ENABLE: "false"
+      WATCHTOWER_LABEL_ENABLE: "true"
       DOCKER_API_VERSION: "1.43"
     deploy:
       resources:

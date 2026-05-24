@@ -30,8 +30,8 @@ function logCaptureAttempt(data: {
 }) {
   try {
     db.prepare(
-      `INSERT INTO recipe_capture_log (source, source_id, agent_id, project_id, status, title, doc_id, error_message)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO recipe_capture_log (source, source_id, agent_id, project_id, status, title, doc_id, error_message, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))`
     ).run(data.source, data.sourceId, data.agentId, data.projectId, data.status, data.title ?? null, data.docId ?? null, data.errorMessage ?? null)
   } catch { /* DB not ready */ }
 }
@@ -94,13 +94,35 @@ interface CaptureAnalysis {
   reasoning: string
 }
 
+function resolveLlmModel(): string {
+  // 1. Explicit env var
+  const envModel = process.env.RECIPE_LLM_MODEL
+  if (envModel) return envModel
+
+  // 2. Dashboard chat routing chain (what user selected in Providers UI)
+  try {
+    const row = db.prepare(
+      "SELECT chain FROM model_routing WHERE purpose = 'chat'"
+    ).get() as { chain: string } | undefined
+    if (row?.chain) {
+      const chain = JSON.parse(row.chain) as { model?: string }[]
+      if (chain[0]?.model) return chain[0].model
+    }
+  } catch {
+    // DB might not be ready yet
+  }
+
+  // 3. Fallback
+  return 'gpt-5.4-mini'
+}
+
 async function analyzeForCapture(context: string): Promise<CaptureAnalysis | null> {
   try {
     const res = await fetch(`${CLIPROXY_URL()}/v1/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: process.env.RECIPE_LLM_MODEL || 'gemini-2.5-flash',
+        model: resolveLlmModel(),
         messages: [
           {
             role: 'system',
