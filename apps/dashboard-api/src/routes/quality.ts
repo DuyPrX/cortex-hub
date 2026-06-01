@@ -405,8 +405,15 @@ sessionsRouter.post('/start', async (c) => {
       ).all()
     }
 
-    const recentStmt = db.prepare('SELECT id, task_summary, created_at FROM session_handoffs ORDER BY created_at DESC LIMIT 3')
-    const recentSessions = recentStmt.all()
+    // Scope recentSessions to the resolved project when available, so /cs init
+    // doesn't surface session summaries from other projects.
+    const recentSessions = project
+      ? db.prepare(
+          'SELECT id, task_summary, created_at FROM session_handoffs WHERE project_id = ? ORDER BY created_at DESC LIMIT 3'
+        ).all((project as Record<string, unknown>).id)
+      : db.prepare(
+          'SELECT id, task_summary, created_at FROM session_handoffs ORDER BY created_at DESC LIMIT 3'
+        ).all()
 
     const projectName = (project?.name as string) ?? 'Unknown Project'
     const projectDesc = (project?.description as string) ?? ''
@@ -421,12 +428,13 @@ sessionsRouter.post('/start', async (c) => {
 
     if (!existingSession) {
       const insertStmt = db.prepare(
-        'INSERT INTO session_handoffs (id, from_agent, project, task_summary, context, status, api_key_name, hostname, os, ide, branch, capabilities, role, last_activity) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime(\'%Y-%m-%dT%H:%M:%SZ\', \'now\'))'
+        'INSERT INTO session_handoffs (id, from_agent, project, project_id, task_summary, context, status, api_key_name, hostname, os, ide, branch, capabilities, role, last_activity) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime(\'%Y-%m-%dT%H:%M:%SZ\', \'now\'))'
       )
       insertStmt.run(
         sessionId,
         agentId,
         resolvedProject,
+        (project as Record<string, unknown>)?.id ?? null,  // fix: populate project_id FK so sessions are correctly scoped
         `Session started: mode=${mode ?? 'development'}`,
         JSON.stringify({ repo, mode, agentId, projectId: project?.id }),
         'active',
