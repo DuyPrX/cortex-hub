@@ -19,6 +19,24 @@ export default function DashboardLayout({ children, title, subtitle, section: _s
   const [isVisible, setIsVisible] = useState(false)
   const prevPathRef = useRef(pathname)
 
+  // Sidebar collapse state (persisted in localStorage)
+  const [isCollapsed, setIsCollapsed] = useState(false)
+
+  useEffect(() => {
+    const saved = localStorage.getItem('sidebar-collapsed')
+    if (saved === 'true') {
+      setIsCollapsed(true)
+    }
+  }, [])
+
+  const toggleSidebar = () => {
+    setIsCollapsed(prev => {
+      const next = !prev
+      localStorage.setItem('sidebar-collapsed', String(next))
+      return next
+    })
+  }
+
   useEffect(() => {
     // On route change: reset visibility then animate in
     if (prevPathRef.current !== pathname) {
@@ -38,8 +56,8 @@ export default function DashboardLayout({ children, title, subtitle, section: _s
 
   return (
     <SetupGuard>
-      <div className={styles.wrapper}>
-        <Sidebar />
+      <div className={`${styles.wrapper} ${isCollapsed ? styles.collapsed : ''}`}>
+        <Sidebar isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} />
         <main className={styles.main}>
           {title && (
             <header className={styles.pageHeader}>
