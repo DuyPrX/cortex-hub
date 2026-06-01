@@ -375,7 +375,8 @@ The installer:
 ### Server Setup (Admin)
 
 ```bash
-git clone https://github.com/lktiep/cortex-hub.git
+# Clone from your self-hosted server (or wherever you keep the repo)
+git clone <your-cortex-hub-repo-url>
 cd cortex-hub
 corepack enable && pnpm install
 cp .env.example .env  # add API keys

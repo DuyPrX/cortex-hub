@@ -804,7 +804,7 @@ Run these steps IN ORDER. Do NOT skip any step. Do NOT proceed to user work unti
 ## Step 1: Session Start
 Call `cortex_session_start`:
 ```
-repo: "https://github.com/lktiep/cortex-hub.git"
+repo: "$GIT_REPO"
 mode: "development"
 agentId: "claude-code"
 ide: "<your IDE>"

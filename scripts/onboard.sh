@@ -484,7 +484,7 @@ At the START of every conversation, before doing anything else:
 
 1. Call `cortex_session_start` with:
    ```
-   repo: "https://github.com/lktiep/cortex-hub.git"
+   repo: "$GIT_REPO_URL"
    mode: "development"
    agentId: "antigravity"
    ```
@@ -512,7 +512,7 @@ projectId: "<from session_start response>"
 
 Call `cortex_code_reindex` to update code intelligence:
 ```
-repo: "https://github.com/lktiep/cortex-hub.git"
+repo: "$GIT_REPO_URL"
 branch: "<current branch>"
 ```
 

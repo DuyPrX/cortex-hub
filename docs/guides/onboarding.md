@@ -209,7 +209,7 @@ If you prefer manual setup over `/install`:
 ### 1. Clone & Run Bootstrap
 
 ```bash
-git clone https://github.com/lktiep/cortex-hub.git
+git clone <your-cortex-hub-repo-url>
 cd cortex-hub
 bash scripts/bootstrap.sh
 # Select: "2) Member"

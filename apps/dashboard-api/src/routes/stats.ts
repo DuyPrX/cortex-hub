@@ -522,7 +522,7 @@ statsRouter.get('/tool-analytics', (c) => {
   const projectId = c.req.query('projectId')
 
   try {
-    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 19)
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
 
     // Build WHERE clause dynamically
     const conditions = ['created_at >= ?']
