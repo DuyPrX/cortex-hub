@@ -81,11 +81,7 @@ interface FixResult {
 }
 
 function resolveLlmModel(): string {
-  // 1. Explicit env var
-  const envModel = process.env.RECIPE_LLM_MODEL
-  if (envModel) return envModel
-
-  // 2. Dashboard chat routing chain (what user selected in Providers UI)
+  // 1. Dashboard chat routing chain (what user selected in Providers UI)
   try {
     const row = db.prepare(
       "SELECT chain FROM model_routing WHERE purpose = 'chat'"
@@ -98,8 +94,12 @@ function resolveLlmModel(): string {
     // DB might not be ready yet
   }
 
+  // 2. Explicit env var
+  const envModel = process.env.RECIPE_LLM_MODEL
+  if (envModel) return envModel
+
   // 3. Fallback
-  return 'gpt-5.4-mini'
+  return ''
 }
 
 async function generateFix(doc: {

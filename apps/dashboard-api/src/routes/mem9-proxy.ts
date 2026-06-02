@@ -47,11 +47,7 @@ function resolveGeminiApiKey(): string {
  * Priority: MEM9_LLM_MODEL env → chat routing chain from DB → fallback
  */
 function resolveLlmModel(): string {
-  // 1. Explicit env var
-  const envModel = process.env['MEM9_LLM_MODEL']
-  if (envModel) return envModel
-
-  // 2. Dashboard chat routing chain (what user selected in Providers UI)
+  // 1. Dashboard chat routing chain (what user selected in Providers UI)
   try {
     const row = db.prepare(
       "SELECT chain FROM model_routing WHERE purpose = 'chat'"
@@ -64,8 +60,12 @@ function resolveLlmModel(): string {
     // DB might not be ready yet
   }
 
+  // 2. Explicit env var
+  const envModel = process.env['MEM9_LLM_MODEL']
+  if (envModel) return envModel
+
   // 3. Fallback
-  return 'gemini-2.5-flash'
+  return ''
 }
 
 /**

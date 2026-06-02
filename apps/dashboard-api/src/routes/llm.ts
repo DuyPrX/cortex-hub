@@ -210,7 +210,7 @@ async function chatViaGemini(
   responseFormat?: { type: string }
 ): Promise<{ content: string; promptTokens: number; completionTokens: number }> {
   const base = baseUrl.includes('generativelanguage.googleapis.com')
-    ? baseUrl.replace(/\/$/, '')
+    ? baseUrl.replace(/\/$/, '').replace(/\/v1$/, '/v1beta')
     : 'https://generativelanguage.googleapis.com/v1beta'
   const url = `${base}/models/${model}:generateContent?key=${apiKey}`
 
