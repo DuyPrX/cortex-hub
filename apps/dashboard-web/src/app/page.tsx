@@ -170,7 +170,7 @@ export default function DashboardPage() {
   const svcMap = healthData?.services as Record<string, string> | undefined
 
   // Dynamic MCP URL state to resolve Tailscale/localhost
-  const [mcpUrl, setMcpUrl] = useState('https://cortex-mcp.jackle.dev')
+  const [mcpUrl, setMcpUrl] = useState('http://localhost:8318')
 
   useEffect(() => {
     setMcpUrl(getExternalUrl('mcp'))

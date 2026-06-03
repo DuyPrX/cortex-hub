@@ -35,7 +35,7 @@ Write-Host ""
 Write-Step "Connecting to Cortex Hub..."
 
 if ($McpUrl -eq "") {
-    $defaultUrl = "https://cortex-mcp.jackle.dev/mcp"
+    $defaultUrl = "http://localhost:8318/mcp"
     $input = Read-Host "Enter your Cortex Hub MCP URL [$defaultUrl]"
     $McpUrl = if ($input) { $input } else { $defaultUrl }
 }
@@ -636,7 +636,7 @@ if (-not (Test-Path $workflowDir)) {
 }
 
 # Download templates from repo if available
-$templatesUrl = "https://raw.githubusercontent.com/lktiep/cortex-hub/master/templates/workflows"
+$templatesUrl = "https://raw.githubusercontent.com/DuyPrX/cortex-hub/master/templates/workflows"
 $workflows = @("code.md", "continue.md", "phase.md")
 
 foreach ($wf in $workflows) {

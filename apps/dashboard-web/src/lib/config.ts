@@ -1,23 +1,15 @@
 // Resolve external URLs dynamically to support Tailscale, localhost, and custom domains
 export const getExternalUrl = (type: 'dashboard' | 'api' | 'mcp' | 'cliproxy' | 'qdrant'): string => {
   if (typeof window === 'undefined') {
-    if (type === 'mcp') return 'https://cortex-mcp.jackle.dev'
-    if (type === 'cliproxy') return 'https://cortex-llm.jackle.dev'
-    if (type === 'qdrant') return 'https://qdrant.hub.jackle.dev'
+    if (type === 'dashboard') return 'http://localhost:3000'
+    if (type === 'api') return 'http://localhost:4000'
+    if (type === 'mcp') return 'http://localhost:8318'
+    if (type === 'cliproxy') return 'http://localhost:8317'
+    if (type === 'qdrant') return 'http://localhost:6333'
     return ''
   }
 
   const { protocol, hostname, port } = window.location
-  const isJackle = hostname.includes('jackle.dev')
-
-  if (isJackle) {
-    if (type === 'dashboard') return 'https://hub.jackle.dev'
-    if (type === 'api') return 'https://cortex-api.jackle.dev'
-    if (type === 'mcp') return 'https://cortex-mcp.jackle.dev'
-    if (type === 'cliproxy') return 'https://cortex-llm.jackle.dev'
-    if (type === 'qdrant') return 'https://qdrant.hub.jackle.dev'
-    return ''
-  }
 
   // Self-hosted / Tailscale / Local setups
   if (type === 'dashboard' || type === 'api') {

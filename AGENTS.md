@@ -71,9 +71,9 @@ Self-hosted MCP platform: code intelligence, persistent memory, shared knowledge
 ### Endpoints
 | Service | URL |
 |---------|-----|
-| Dashboard | hub.jackle.dev |
-| API | cortex-api.jackle.dev |
-| MCP | cortex-mcp.jackle.dev |
+| Dashboard | http://localhost:3000 |
+| API | http://localhost:4000 |
+| MCP | http://localhost:8318 |
 
 ---
 

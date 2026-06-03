@@ -155,10 +155,10 @@ export default function SettingsPage() {
 
   // Dynamic endpoints state to resolve Tailscale/localhost/custom domains
   const [endpoints, setEndpoints] = useState({
-    dashboard: 'https://hub.jackle.dev',
-    api: 'https://cortex-api.jackle.dev',
-    mcp: 'https://cortex-mcp.jackle.dev',
-    llmProxy: 'https://cortex-llm.jackle.dev',
+    dashboard: 'http://localhost:3000',
+    api: 'http://localhost:4000',
+    mcp: 'http://localhost:8318',
+    llmProxy: 'http://localhost:8317',
   })
 
   useEffect(() => {
@@ -613,7 +613,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className={styles.aboutLinks}>
-            <a href="https://github.com/jackle-dev/cortex-hub" target="_blank" rel="noreferrer" className={styles.aboutLink}>
+            <a href="https://github.com/DuyPrX/cortex-hub" target="_blank" rel="noreferrer" className={styles.aboutLink}>
               GitHub
             </a>
             <a href="/docs" className={styles.aboutLink}>

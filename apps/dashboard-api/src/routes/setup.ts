@@ -11,7 +11,7 @@ const MANAGEMENT_KEY = () =>
 const QDRANT_URL = () =>
   process.env.QDRANT_URL || 'http://localhost:6333'
 const DASHBOARD_URL = () =>
-  process.env.DASHBOARD_URL || 'https://hub.jackle.dev'
+  process.env.DASHBOARD_URL || 'http://localhost:4000'
 
 function managementHeaders() {
   return {

@@ -111,10 +111,10 @@ prompt_user_secret() {
 }
 
 # 1. Get MCP URL
-if prompt_user -rp "Enter your Cortex Hub MCP URL [https://cortex-mcp.jackle.dev/mcp]: " INPUT_URL; then
-    MCP_URL=${INPUT_URL:-"https://cortex-mcp.jackle.dev/mcp"}
+if prompt_user -rp "Enter your Cortex Hub MCP URL [http://localhost:8318/mcp]: " INPUT_URL; then
+    MCP_URL=${INPUT_URL:-"http://localhost:8318/mcp"}
 else
-    MCP_URL=${HUB_API_URL:-"https://cortex-mcp.jackle.dev/mcp"}
+    MCP_URL=${HUB_API_URL:-"http://localhost:8318/mcp"}
 fi
 MCP_URL="${MCP_URL%/}"
 
@@ -1388,7 +1388,7 @@ if [ "$NEEDS_UPDATE" = true ]; then
         done
     else
         # Source 2: Download from GitHub
-        TEMPLATES_BASE="https://raw.githubusercontent.com/lktiep/cortex-hub/main/templates/workflows"
+        TEMPLATES_BASE="https://raw.githubusercontent.com/DuyPrX/cortex-hub/main/templates/workflows"
         WORKFLOW_FILES=("code.md" "continue.md" "phase.md")
 
         echo -e "${BLUE}    Downloading templates from GitHub...${NC}"

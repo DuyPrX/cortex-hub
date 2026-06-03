@@ -73,7 +73,7 @@ app.get('/.well-known/oauth-protected-resource/mcp', (c) => {
   return c.json({
     resource: `${c.req.url.replace('/.well-known/oauth-protected-resource/mcp', '/mcp')}`,
     bearer_methods_supported: ['header'],
-    resource_documentation: 'https://cortex-mcp.jackle.dev',
+    resource_documentation: 'https://github.com/DuyPrX/cortex-hub',
   })
 })
 
@@ -82,7 +82,7 @@ app.get('/.well-known/oauth-protected-resource', (c) => {
   return c.json({
     resource: c.req.url.replace('/.well-known/oauth-protected-resource', '/'),
     bearer_methods_supported: ['header'],
-    resource_documentation: 'https://cortex-mcp.jackle.dev',
+    resource_documentation: 'https://github.com/DuyPrX/cortex-hub',
   })
 })
 
