@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { Env } from '../types.js'
+import { apiCall } from '../api-call.js'
 
 /**
  * Register code intelligence tools.
@@ -20,7 +21,7 @@ export function registerCodeTools(server: McpServer, env: Env) {
     params: Record<string, unknown>,
     timeoutMs = 15000,
   ): Promise<unknown> {
-    const response = await fetch(`${apiUrl()}/api/intel/${endpoint}`, {
+    const response = await apiCall(env, `/api/intel/${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),
@@ -151,7 +152,7 @@ export function registerCodeTools(server: McpServer, env: Env) {
         const resolvedForCodeSearch = resolvedProject
         if (resolvedForCodeSearch) {
           try {
-            const codeRes = await fetch(`${apiUrl()}/api/intel/code-search`, {
+            const codeRes = await apiCall(env, '/api/intel/code-search', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ query, projectId: resolvedForCodeSearch, branch, limit: limit ?? 5 }),
@@ -442,7 +443,8 @@ export function registerCodeTools(server: McpServer, env: Env) {
     {},
     async () => {
       try {
-        const response = await fetch(`${apiUrl()}/api/intel/repos`, {
+        const response = await apiCall(env, '/api/intel/repos', {
+          method: 'GET',
           signal: AbortSignal.timeout(10000),
         })
 
@@ -521,7 +523,7 @@ export function registerCodeTools(server: McpServer, env: Env) {
     async ({ file, repo, projectId, startLine, endLine }) => {
       try {
         const resolvedProject = await resolveRepo(repo, projectId)
-        const res = await fetch(`${apiUrl()}/api/intel/file-content`, {
+        const res = await apiCall(env, '/api/intel/file-content', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ projectId: resolvedProject, file, startLine, endLine }),
