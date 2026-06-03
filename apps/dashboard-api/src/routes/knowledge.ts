@@ -89,22 +89,23 @@ function getVectorStore(): VectorStore {
 function normalizeProjectId(projectId: string | null | undefined): string | null {
   if (!projectId) return null
   try {
-    // Resolve project UUID, slug, name, or git URL to the canonical lowercase slug
+    // Resolve project ID, slug, name, or git URL to the canonical UUID
     const project = db.prepare(
-      `SELECT slug FROM projects
+      `SELECT id FROM projects
        WHERE id = ?
           OR slug = ? COLLATE NOCASE
           OR name = ? COLLATE NOCASE`
-    ).get(projectId, projectId, projectId) as { slug: string } | undefined
+    ).get(projectId, projectId, projectId) as { id: string } | undefined
 
-    if (project?.slug) {
-      return project.slug.toLowerCase()
+    if (project?.id) {
+      return project.id
     }
   } catch (error) {
     logger.warn(`normalizeProjectId failed: ${error}`)
   }
-  return projectId.toLowerCase()
+  return projectId
 }
+
 
 
 // ── Hierarchical clustering helpers (zero LLM, pure vector math) ──
