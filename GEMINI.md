@@ -64,6 +64,12 @@ Future coding agents **MUST** follow these rules to maintain compatibility:
 - Maintain the breakpoint for column grid stacking at **`1280px`** (rather than 1024px) to ensure proper vertical formatting on portrait displays (e.g. `1080x1920` monitors).
 - Keep content containers at `max-width: 100%` on widescreen viewports to optimize layout usage on high-resolution displays (e.g. `2560x1600` monitors).
 
+### 5. Single-Model Embedding Configuration
+- Never configure fallback routing chains for embedding models. Because different embedding models use different vector spaces and dimensions (e.g., 384 vs. 768 vs. 1536), switching models dynamically will cause database index insertion/query crashes or corrupt search results. Enforce single-model selection for embedding.
+
+### 6. Flexbox Scrollbar Prevention
+- Always ensure `.main` and `.content` flex containers in layout styling (e.g., `DashboardLayout.module.css`) include `min-width: 0`. Without `min-width: 0`, standard browser flexbox calculation defaults to `min-width: auto`, allowing long continuous strings or tables to stretch the main area and create page-level horizontal scrollbars.
+
 ---
 
 ## 🩺 Diagnostic Commands
