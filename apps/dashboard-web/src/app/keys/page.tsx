@@ -201,6 +201,12 @@ export default function KeysPage() {
             <code className={styles.newKeyValue} style={{ textAlign: 'left', background: 'var(--bg-primary)' }}>{newKeyResult}</code>
             <div className={styles.modalActions} style={{ justifyContent: 'center', marginTop: 'var(--space-6)' }}>
               <button
+                className="btn btn-ghost"
+                onClick={() => setNewKeyResult(null)}
+              >
+                Close
+              </button>
+              <button
                 className="btn btn-primary"
                 onClick={async () => {
                   await copyToClipboard(newKeyResult)
