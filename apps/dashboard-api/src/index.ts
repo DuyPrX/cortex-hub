@@ -97,8 +97,10 @@ app.use('/api/*', async (c, next) => {
     // Look up project in database by id or slug
     const project = db.prepare(`
       SELECT id, enabled FROM projects 
-      WHERE id = ? OR slug = ? COLLATE NOCASE
-    `).get(projectId, projectId) as { id: string; enabled: number } | undefined
+      WHERE id = ? 
+         OR slug = ? COLLATE NOCASE 
+         OR name = ? COLLATE NOCASE
+    `).get(projectId, projectId, projectId) as { id: string; enabled: number } | undefined
 
     if (!project) {
       return c.json({ success: false, error: 'Project not registered in Cortex Hub. Please register it in the dashboard first.' }, 403)
