@@ -22,27 +22,6 @@ let mem9Instance: Mem9 | null = null
 let embedderInstance: Embedder | null = null
 
 /**
- * Resolve the Gemini API key from multiple sources (priority order):
- * 1. GEMINI_API_KEY env var (direct config)
- * 2. provider_accounts table in SQLite (Providers UI)
- */
-function resolveGeminiApiKey(): string {
-  const envKey = process.env['GEMINI_API_KEY']
-  if (envKey) return envKey
-
-  try {
-    const row = db.prepare(
-      "SELECT api_key FROM provider_accounts WHERE type = 'gemini' AND status = 'enabled' AND api_key IS NOT NULL LIMIT 1"
-    ).get() as { api_key: string } | undefined
-    if (row?.api_key) return row.api_key
-  } catch {
-    // DB might not be ready yet
-  }
-
-  return ''
-}
-
-/**
  * Resolve the LLM model for mem9 (fact extraction, dedup).
  * Priority: MEM9_LLM_MODEL env → chat routing chain from DB → fallback
  */
@@ -73,8 +52,7 @@ function resolveLlmModel(): string {
  * and singleton needs to be recreated.
  */
 function configFingerprint(): string {
-  const provider = process.env['EMBEDDING_PROVIDER'] || 'gateway'
-  return `${resolveGeminiApiKey()}|${resolveLlmModel()}|${provider}`
+  return resolveLlmModel()
 }
 
 let lastFingerprint = ''

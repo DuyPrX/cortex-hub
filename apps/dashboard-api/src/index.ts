@@ -172,73 +172,68 @@ app.get('/health', async (c) => {
   // Check active Chat Model health
   let chatModelStatus: 'ok' | 'error' | 'not_configured' = 'not_configured'
   let chatModelError: string | undefined = undefined
-
   try {
     const row = db.prepare("SELECT chain FROM model_routing WHERE purpose = 'chat'").get() as { chain: string } | undefined
     if (row?.chain) {
       const chain = JSON.parse(row.chain) as Array<{ accountId: string; model: string }>
       if (chain.length > 0 && chain[0]) {
         const slot = chain[0]
-        if (slot.accountId === 'local') {
-          chatModelStatus = 'ok'
-        } else {
-          const acct = db
-            .prepare("SELECT name, api_base, api_key, type FROM provider_accounts WHERE id = ? AND status = 'enabled'")
-            .get(slot.accountId) as { name: string; api_base: string; api_key: string | null; type: string } | undefined
+        const acct = db
+          .prepare("SELECT name, api_base, api_key, type FROM provider_accounts WHERE id = ? AND status = 'enabled'")
+          .get(slot.accountId) as { name: string; api_base: string; api_key: string | null; type: string } | undefined
 
-          if (!acct) {
-            chatModelStatus = 'error'
-            chatModelError = `Configured chat account "${slot.accountId}" not found or disabled.`
-          } else {
-            try {
-              if (acct.type === 'gemini') {
-                const base = acct.api_base.replace(/\/$/, '')
-                const apiKey = acct.api_key ?? ''
-                const url = `${base}/models/${slot.model}?key=${apiKey}`
-                const res = await fetch(url, { signal: AbortSignal.timeout(3000) })
-                if (!res.ok) {
-                  chatModelStatus = 'error'
-                  chatModelError = `Gemini API check failed: ${res.status} ${res.statusText}`
-                } else {
-                  chatModelStatus = 'ok'
-                }
-              } else if (acct.type === 'ollama') {
-                const url = `${acct.api_base.replace(/\/$/, '')}/models`
-                const headers: Record<string, string> = {}
-                if (acct.api_key && acct.api_key !== 'noon' && acct.api_key !== 'none') {
-                  headers['Authorization'] = `Bearer ${acct.api_key}`
-                }
-                const res = await fetch(url, { headers, signal: AbortSignal.timeout(3000) })
-                if (!res.ok) {
-                  chatModelStatus = 'error'
-                  chatModelError = `Ollama check failed: ${res.status}`
-                } else {
-                  const data = (await res.json()) as { data?: Array<{ id: string }> }
-                  const models = data.data ?? []
-                  const exists = models.some((m) => m.id === slot.model || m.id.split(':')[0] === slot.model.split(':')[0])
-                  if (!exists) {
-                    chatModelStatus = 'error'
-                    chatModelError = `Model "${slot.model}" is not downloaded on Ollama.`
-                  } else {
-                    chatModelStatus = 'ok'
-                  }
-                }
+        if (!acct) {
+          chatModelStatus = 'error'
+          chatModelError = `Configured chat account "${slot.accountId}" not found or disabled.`
+        } else {
+          try {
+            if (acct.type === 'gemini') {
+              const base = acct.api_base.replace(/\/$/, '')
+              const apiKey = acct.api_key ?? ''
+              const url = `${base}/models/${slot.model}?key=${apiKey}`
+              const res = await fetch(url, { signal: AbortSignal.timeout(3000) })
+              if (!res.ok) {
+                chatModelStatus = 'error'
+                chatModelError = `Gemini API check failed: ${res.status} ${res.statusText}`
               } else {
-                const url = `${acct.api_base.replace(/\/$/, '')}/models`
-                const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-                if (acct.api_key) headers['Authorization'] = `Bearer ${acct.api_key}`
-                const res = await fetch(url, { headers, signal: AbortSignal.timeout(3000) })
-                if (!res.ok) {
+                chatModelStatus = 'ok'
+              }
+            } else if (acct.type === 'ollama') {
+              const url = `${acct.api_base.replace(/\/$/, '')}/models`
+              const headers: Record<string, string> = {}
+              if (acct.api_key && acct.api_key !== 'noon' && acct.api_key !== 'none') {
+                headers['Authorization'] = `Bearer ${acct.api_key}`
+              }
+              const res = await fetch(url, { headers, signal: AbortSignal.timeout(3000) })
+              if (!res.ok) {
+                chatModelStatus = 'error'
+                chatModelError = `Ollama check failed: ${res.status}`
+              } else {
+                const data = (await res.json()) as { data?: Array<{ id: string }> }
+                const models = data.data ?? []
+                const exists = models.some((m) => m.id === slot.model || m.id.split(':')[0] === slot.model.split(':')[0])
+                if (!exists) {
                   chatModelStatus = 'error'
-                  chatModelError = `API key/endpoint check failed: ${res.status} ${res.statusText}`
+                  chatModelError = `Model "${slot.model}" is not downloaded on Ollama.`
                 } else {
                   chatModelStatus = 'ok'
                 }
               }
-            } catch (err) {
-              chatModelStatus = 'error'
-              chatModelError = `Connection failed: ${String(err)}`
+            } else {
+              const url = `${acct.api_base.replace(/\/$/, '')}/models`
+              const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+              if (acct.api_key) headers['Authorization'] = `Bearer ${acct.api_key}`
+              const res = await fetch(url, { headers, signal: AbortSignal.timeout(3000) })
+              if (!res.ok) {
+                chatModelStatus = 'error'
+                chatModelError = `API key/endpoint check failed: ${res.status} ${res.statusText}`
+              } else {
+                chatModelStatus = 'ok'
+              }
             }
+          } catch (err) {
+            chatModelStatus = 'error'
+            chatModelError = `Connection failed: ${String(err)}`
           }
         }
       }
@@ -335,27 +330,4 @@ try {
   setupConductorWebSocket(server as any)
 } catch (e) {
   console.warn('[ws] Conductor WebSocket not available:', (e as Error).message)
-}
-
-// Pre-warm local embedding model if EMBEDDING_PROVIDER=local.
-// The first cold-load downloads ~25MB and can take 5-10s. Doing it at
-// startup avoids the first API request hanging or timing out.
-if (process.env['EMBEDDING_PROVIDER'] === 'local') {
-  // Defer to next tick so it doesn't block startup logs
-  setTimeout(() => {
-    void (async () => {
-      try {
-        const t0 = Date.now()
-        logger.info('[embed] Importing @cortex/shared-mem9...')
-        const { embedLocal } = await import('@cortex/shared-mem9')
-        const model = process.env['LOCAL_EMBEDDING_MODEL'] || 'Xenova/all-MiniLM-L6-v2'
-        logger.info(`[embed] Pre-warming local model: ${model}`)
-        const v = await embedLocal('warmup', model)
-        logger.info(`[embed] Local model ready in ${Date.now() - t0}ms (dim=${v.length})`)
-      } catch (e) {
-        const err = e as Error
-        logger.error(`[embed] Local pre-warm FAILED: ${err.message}\n${err.stack?.slice(0, 2000)}`)
-      }
-    })()
-  }, 500)
 }
