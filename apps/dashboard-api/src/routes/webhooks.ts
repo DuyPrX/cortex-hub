@@ -71,7 +71,7 @@ webhooksRouter.post('/push', async (c) => {
     if (!activeJob) {
       const jobId = `idx-${randomUUID().slice(0, 12)}`
       db.prepare(
-        `INSERT INTO index_jobs (id, project_id, branch, status, progress) VALUES (?, ?, ?, 'pending', 0)`
+        `INSERT INTO index_jobs (id, project_id, branch, status, progress, created_at) VALUES (?, ?, ?, 'pending', 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))`
       ).run(jobId, project.id, branch)
       startIndexing(project.id, jobId, branch).catch(() => {})
       reindexStarted = true
