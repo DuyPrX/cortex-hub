@@ -73,32 +73,26 @@ function resolveLlmModel(): string {
  * and singleton needs to be recreated.
  */
 function configFingerprint(): string {
-  const provider = process.env['EMBEDDING_PROVIDER'] || 'local'
-  const localModel = process.env['LOCAL_EMBEDDING_MODEL'] || ''
-  return `${resolveGeminiApiKey()}|${resolveLlmModel()}|${provider}|${localModel}`
+  const provider = process.env['EMBEDDING_PROVIDER'] || 'gateway'
+  return `${resolveGeminiApiKey()}|${resolveLlmModel()}|${provider}`
 }
 
 let lastFingerprint = ''
 
 function getMem9Config(): Mem9Config {
-  const embeddingProvider = (process.env['EMBEDDING_PROVIDER'] || 'local') as 'gemini' | 'local'
+  const gatewayUrl = process.env['LLM_GATEWAY_URL'] ?? `http://localhost:${process.env['PORT'] || 4000}/api/llm`
 
   return {
     llm: {
       baseUrl: `http://localhost:${process.env['PORT'] || 4000}/api/llm/v1`,
       model: resolveLlmModel(),
     },
-    embedder: embeddingProvider === 'local'
-      ? {
-          provider: 'local' as const,
-          apiKey: '',
-          model: process.env['LOCAL_EMBEDDING_MODEL'] || 'Xenova/all-MiniLM-L6-v2',
-        }
-      : {
-          provider: 'gemini' as const,
-          apiKey: resolveGeminiApiKey(),
-          model: process.env['MEM9_EMBEDDING_MODEL'] || 'gemini-embedding-001',
-        },
+    embedder: {
+      provider: 'gemini' as const, // Dummy to bypass local check
+      apiKey: '',
+      model: 'gemini-embedding-001',
+      gatewayUrl,
+    },
     vectorStore: {
       url: process.env['QDRANT_URL'] || 'http://qdrant:6333',
       collection: 'cortex_memories',

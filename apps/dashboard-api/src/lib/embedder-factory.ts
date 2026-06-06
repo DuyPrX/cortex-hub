@@ -32,19 +32,9 @@ function resolveGeminiApiKey(): string {
 }
 
 /**
- * Build an Embedder honoring EMBEDDING_PROVIDER env var.
+ * Build an Embedder routing through LLM Gateway to respect database model routing (e.g. Ollama).
  */
 export function createEmbedder(): Embedder {
-  const provider = (process.env['EMBEDDING_PROVIDER'] || 'local') as 'gemini' | 'local'
-  if (provider === 'local') {
-    return new Embedder({
-      provider: 'local' as const,
-      apiKey: '',
-      model: process.env['LOCAL_EMBEDDING_MODEL'] || 'Xenova/all-MiniLM-L6-v2',
-    })
-  }
-
-  // Non-local: route through LLM Gateway to respect database model routing (e.g. Ollama)
   const config: EmbedderConfig = {
     provider: 'gemini' as const, // Dummy to bypass local check in Embedder.ts
     apiKey: '',
@@ -63,24 +53,12 @@ export function createEmbedder(): Embedder {
  * Used to ensure Qdrant collections are created with the right size.
  */
 export function getActiveEmbeddingDim(): number {
-  const provider = (process.env['EMBEDDING_PROVIDER'] || 'local') as 'gemini' | 'local'
-  if (provider === 'local') {
-    const model = process.env['LOCAL_EMBEDDING_MODEL'] || 'Xenova/all-MiniLM-L6-v2'
-    const dimMap: Record<string, number> = {
-      'Xenova/all-MiniLM-L6-v2': 384,
-      'Xenova/all-MiniLM-L12-v2': 384,
-      'Xenova/bge-small-en-v1.5': 384,
-      'Xenova/bge-base-en-v1.5': 768,
-      'Xenova/multilingual-e5-small': 384,
-    }
-    return dimMap[model] ?? 384
-  }
-  return 768 // gemini default
+  return 1024 // Default Ollama bge-m3 dimension
 }
 
 /**
  * Returns the active provider name (for logging/diagnostics).
  */
-export function getActiveProvider(): 'gemini' | 'local' {
-  return (process.env['EMBEDDING_PROVIDER'] || 'local') as 'gemini' | 'local'
+export function getActiveProvider(): string {
+  return 'gateway'
 }
