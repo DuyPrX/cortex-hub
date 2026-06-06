@@ -111,6 +111,32 @@ if [ -d "$REPOS_DIR" ]; then
     echo "GitNexus: Auto-discovery complete. ${ANALYZED} new repos analyzed. Total registered: ${TOTAL}"
 fi
 
-# Start the eval-server
+# Start the eval-server in the background
 echo "GitNexus: Starting eval-server on port $PORT..."
-exec gitnexus eval-server --port "$PORT" --idle-timeout 0
+gitnexus eval-server --port "$PORT" --idle-timeout 0 &
+EVAL_PID=$!
+
+# Run background watchdog daemon to index new/re-indexed repos
+(
+    echo "GitNexus: Starting watchdog daemon..."
+    while true; do
+        sleep 10
+        if [ -d "$REPOS_DIR" ]; then
+            for repo_dir in "$REPOS_DIR"/*/; do
+                [ -d "$repo_dir/.git" ] || continue
+                repo_name=$(basename "$repo_dir")
+                
+                if [ ! -d "$repo_dir/.gitnexus" ]; then
+                    echo "GitNexus watchdog: New or re-indexed repo detected: ${repo_name}."
+                    echo "GitNexus watchdog: Analyzing ${repo_name}..."
+                    cd "$repo_dir" && gitnexus analyze --force 2>&1
+                    echo "GitNexus watchdog: ${repo_name} analyzed successfully."
+                fi
+            done
+        fi
+    done
+) &
+
+# Wait for eval-server to exit
+wait $EVAL_PID
+

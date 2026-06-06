@@ -11,6 +11,7 @@ import { Embedder, VectorStore } from '@cortex/shared-mem9'
 import type { EmbedderConfig, VectorStoreConfig } from '@cortex/shared-mem9'
 import { db } from '../db/client.js'
 import { createLogger } from '@cortex/shared-utils'
+import { createEmbedder } from '../lib/embedder-factory.js'
 
 const logger = createLogger('knowledge')
 
@@ -61,21 +62,7 @@ function resolveGeminiApiKey(): string {
 }
 
 function getEmbedder(): Embedder {
-  // EMBEDDING_PROVIDER=local switches to in-process @xenova/transformers
-  // (no network, ~200MB RAM, ~10-50ms/text). Default: gemini.
-  const provider = (process.env['EMBEDDING_PROVIDER'] || 'local') as 'gemini' | 'local'
-  const config: EmbedderConfig = provider === 'local'
-    ? {
-        provider: 'local' as const,
-        apiKey: '',
-        model: process.env['LOCAL_EMBEDDING_MODEL'] || 'Xenova/all-MiniLM-L6-v2',
-      }
-    : {
-        provider: 'gemini' as const,
-        apiKey: resolveGeminiApiKey(),
-        model: process.env['MEM9_EMBEDDING_MODEL'] || 'gemini-embedding-001',
-      }
-  return new Embedder(config)
+  return createEmbedder()
 }
 
 function getVectorStore(): VectorStore {

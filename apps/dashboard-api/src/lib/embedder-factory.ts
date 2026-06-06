@@ -36,18 +36,26 @@ function resolveGeminiApiKey(): string {
  */
 export function createEmbedder(): Embedder {
   const provider = (process.env['EMBEDDING_PROVIDER'] || 'local') as 'gemini' | 'local'
-  const config: EmbedderConfig = provider === 'local'
-    ? {
-        provider: 'local' as const,
-        apiKey: '',
-        model: process.env['LOCAL_EMBEDDING_MODEL'] || 'Xenova/all-MiniLM-L6-v2',
-      }
-    : {
-        provider: 'gemini' as const,
-        apiKey: resolveGeminiApiKey(),
-        model: process.env['MEM9_EMBEDDING_MODEL'] || 'gemini-embedding-001',
-      }
-  return new Embedder(config)
+  if (provider === 'local') {
+    return new Embedder({
+      provider: 'local' as const,
+      apiKey: '',
+      model: process.env['LOCAL_EMBEDDING_MODEL'] || 'Xenova/all-MiniLM-L6-v2',
+    })
+  }
+
+  // Non-local: route through LLM Gateway to respect database model routing (e.g. Ollama)
+  const config: EmbedderConfig = {
+    provider: 'gemini' as const, // Dummy to bypass local check in Embedder.ts
+    apiKey: '',
+    model: 'gemini-embedding-001',
+  }
+  const gatewayUrl = process.env['LLM_GATEWAY_URL'] ?? `http://localhost:${process.env['PORT'] || 4000}/api/llm`
+  return new Embedder(config, [], {
+    maxRetries: 2,
+    retryDelayMs: 2000,
+    gatewayUrl,
+  })
 }
 
 /**
