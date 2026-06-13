@@ -63,8 +63,9 @@ export class Embedder {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ input: text, model: 'auto' }),
-      signal: AbortSignal.timeout(30000),
+      signal: AbortSignal.timeout(120000),
     })
+
 
     if (!res.ok) {
       const err = await res.text().catch(() => '')
