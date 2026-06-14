@@ -197,11 +197,94 @@ mem9ProxyRouter.post('/search', async (c) => {
       limit,
     })
 
+    // 1. Resolve project UUID from normalized user ID
+    let projectId: string | null = null
+    if (normalizedUserId.startsWith('project-')) {
+      const branchIndex = normalizedUserId.indexOf(':branch-')
+      projectId = branchIndex !== -1
+        ? normalizedUserId.slice('project-'.length, branchIndex)
+        : normalizedUserId.slice('project-'.length)
+    }
+
+    // 2. Fetch actual session handoffs from SQLite database to guarantee latest session context
+    let sqliteSessions: any[] = []
+    if (projectId) {
+      try {
+        const rows = db.prepare(`
+          SELECT id, task_summary, created_at, from_agent FROM session_handoffs
+          WHERE project_id = ? AND status = 'completed' AND task_summary IS NOT NULL AND task_summary != ''
+          ORDER BY created_at DESC LIMIT 3
+        `).all(projectId) as Array<{ id: string; task_summary: string; created_at: string; from_agent: string }>
+
+        sqliteSessions = rows.map(r => ({
+          id: `session-${r.id}`,
+          memory: `[Session Summary] ${r.task_summary}`,
+          hash: '',
+          userId: normalizedUserId,
+          agentId: r.from_agent,
+          metadata: {
+            type: 'session-summary',
+            session_id: r.id,
+            project_id: projectId,
+            auto_captured: true
+          },
+          score: 1.0,
+          createdAt: r.created_at,
+          updatedAt: r.created_at
+        }))
+      } catch (err) {
+        console.warn('[mem9-proxy] failed to fetch sqlite sessions:', err)
+      }
+    }
+
+    // 3. Merge SQLite sessions and filter duplicates from Qdrant results
+    let combinedMemories = [...result.memories]
+    if (sqliteSessions.length > 0) {
+      for (const sess of sqliteSessions) {
+        const dupIndex = combinedMemories.findIndex(m => m.metadata?.session_id === sess.metadata.session_id)
+        if (dupIndex !== -1) {
+          combinedMemories[dupIndex] = sess
+        } else {
+          combinedMemories.push(sess)
+        }
+      }
+    }
+
+    // 4. Re-rank combined memories by applying recency boost
+    const now = Date.now()
+    const scoredMemories = combinedMemories.map((m) => {
+      const time = m.createdAt ? new Date(m.createdAt).getTime() : 0
+      const ageInDays = Math.max(0, (now - time) / (1000 * 60 * 60 * 24))
+
+      let recencyScore = 0
+      if (m.metadata?.type === 'session-summary') {
+        // Fast exponential decay for session summaries: half-life of 2 days
+        recencyScore = Math.exp(-ageInDays / 2)
+      } else {
+        // Slower linear decay for general memories: linear decay over 90 days
+        recencyScore = Math.max(0, 1 - ageInDays / 90)
+      }
+
+      const isSession = m.metadata?.type === 'session-summary'
+      const weightVector = isSession ? 0.5 : 0.9
+      const weightRecency = isSession ? 0.5 : 0.1
+
+      const finalScore = ((m.score ?? 0) * weightVector) + (recencyScore * weightRecency)
+
+      return {
+        ...m,
+        score: finalScore,
+      }
+    })
+
+    scoredMemories.sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+    const finalMemories = scoredMemories.slice(0, limit ?? 10)
+
     c.header('X-Cortex-Compute-Tokens', String(result.tokensUsed || 0))
     c.header('X-Cortex-Compute-Model', resolveLlmModel())
 
     return c.json({
-      memories: result.memories,
+      memories: finalMemories,
       tokensUsed: result.tokensUsed,
     })
   } catch (error) {
