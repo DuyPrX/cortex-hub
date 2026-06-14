@@ -97,6 +97,43 @@ function getEmbedder(): Embedder {
   return embedderInstance
 }
 
+function normalizeProjectId(projectId: string | null | undefined): string | null {
+  if (!projectId) return null
+  try {
+    const project = db.prepare(
+      `SELECT id FROM projects
+       WHERE id = ?
+          OR slug = ? COLLATE NOCASE
+          OR name = ? COLLATE NOCASE`
+    ).get(projectId, projectId, projectId) as { id: string } | undefined
+
+    if (project?.id) {
+      return project.id
+    }
+  } catch (error) {
+    console.warn(`normalizeProjectId failed: ${error}`)
+  }
+  return projectId
+}
+
+function normalizeMemoryUserId(userId: string): string {
+  if (!userId) return userId
+  if (userId.startsWith('project-')) {
+    const branchIndex = userId.indexOf(':branch-')
+    if (branchIndex !== -1) {
+      const projectIdRaw = userId.slice('project-'.length, branchIndex)
+      const branchPart = userId.slice(branchIndex)
+      const normalizedId = normalizeProjectId(projectIdRaw)
+      return `project-${normalizedId}${branchPart}`
+    } else {
+      const projectIdRaw = userId.slice('project-'.length)
+      const normalizedId = normalizeProjectId(projectIdRaw)
+      return `project-${normalizedId}`
+    }
+  }
+  return userId
+}
+
 /**
  * POST /store — Store a memory
  * Body: { messages, userId, agentId?, metadata? }
@@ -110,8 +147,19 @@ mem9ProxyRouter.post('/store', async (c) => {
       return c.json({ error: 'messages and userId are required' }, 400)
     }
 
+    const normalizedUserId = normalizeMemoryUserId(userId)
+    const normalizedMetadata = { ...(metadata ?? {}) }
+    if (normalizedMetadata.project_id) {
+      normalizedMetadata.project_id = normalizeProjectId(normalizedMetadata.project_id)
+    }
+
     const mem9 = getMem9()
-    const result = await mem9.add({ messages, userId, agentId, metadata })
+    const result = await mem9.add({
+      messages,
+      userId: normalizedUserId,
+      agentId: agentId ?? 'default',
+      metadata: normalizedMetadata,
+    })
 
     c.header('X-Cortex-Compute-Tokens', String(result.tokensUsed || 0))
     c.header('X-Cortex-Compute-Model', resolveLlmModel())
@@ -140,8 +188,14 @@ mem9ProxyRouter.post('/search', async (c) => {
       return c.json({ error: 'query and userId are required' }, 400)
     }
 
+    const normalizedUserId = normalizeMemoryUserId(userId)
     const mem9 = getMem9()
-    const result = await mem9.search({ query, userId, agentId, limit })
+    const result = await mem9.search({
+      query,
+      userId: normalizedUserId,
+      agentId,
+      limit,
+    })
 
     c.header('X-Cortex-Compute-Tokens', String(result.tokensUsed || 0))
     c.header('X-Cortex-Compute-Model', resolveLlmModel())
@@ -155,6 +209,7 @@ mem9ProxyRouter.post('/search', async (c) => {
     return c.json({ error: String(error) }, 500)
   }
 })
+
 
 /**
  * DELETE /:id — Delete a single memory by ID

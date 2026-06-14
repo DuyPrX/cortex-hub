@@ -582,6 +582,43 @@ sessionsRouter.post('/:id/end', async (c) => {
       })
     }
 
+function normalizeProjectId(projectId: string | null | undefined): string | null {
+  if (!projectId) return null
+  try {
+    const project = db.prepare(
+      `SELECT id FROM projects
+       WHERE id = ?
+          OR slug = ? COLLATE NOCASE
+          OR name = ? COLLATE NOCASE`
+    ).get(projectId, projectId, projectId) as { id: string } | undefined
+
+    if (project?.id) {
+      return project.id
+    }
+  } catch (error) {
+    console.warn(`normalizeProjectId failed: ${error}`)
+  }
+  return projectId
+}
+
+function normalizeMemoryUserId(userId: string): string {
+  if (!userId) return userId
+  if (userId.startsWith('project-')) {
+    const branchIndex = userId.indexOf(':branch-')
+    if (branchIndex !== -1) {
+      const projectIdRaw = userId.slice('project-'.length, branchIndex)
+      const branchPart = userId.slice(branchIndex)
+      const normalizedId = normalizeProjectId(projectIdRaw)
+      return `project-${normalizedId}${branchPart}`
+    } else {
+      const projectIdRaw = userId.slice('project-'.length)
+      const normalizedId = normalizeProjectId(projectIdRaw)
+      return `project-${normalizedId}`
+    }
+  }
+  return userId
+}
+
     // Auto-store session summary as searchable memory (safety net)
     // This ensures session context is ALWAYS recoverable even if
     // the agent skips cortex_memory_store or user doesn't run /ce fully
@@ -590,16 +627,19 @@ sessionsRouter.post('/:id/end', async (c) => {
       const projectScope = session.project_id
         ? `project-${session.project_id}`
         : agentId
+      const normalizedScope = normalizeMemoryUserId(projectScope)
+      const normalizedProjectId = session.project_id ? normalizeProjectId(session.project_id) : undefined
+
       try {
         const mem9 = getMem9()
         mem9.add({
           messages: [{ role: 'user', content: `[Session Summary] ${summary}` }],
-          userId: projectScope,
+          userId: normalizedScope,
           agentId,
           metadata: {
             type: 'session-summary',
             session_id: id,
-            project_id: session.project_id ?? undefined,
+            project_id: normalizedProjectId ?? undefined,
             project: session.project ?? undefined,
             auto_captured: true,
           },
@@ -610,6 +650,7 @@ sessionsRouter.post('/:id/end', async (c) => {
         console.warn('[session-end] Memory init failed:', (e as Error).message)
       }
     }
+
 
     return c.json({
       success: true,
